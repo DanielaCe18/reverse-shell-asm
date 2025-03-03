@@ -3,6 +3,9 @@
 ## Overview
 This project is a simple **reverse shell** written in **x86_64 Assembly** for **Linux**. It connects back to an attacker's machine, allowing remote command execution on the target system.
 
+![reverse-shell-1024x333](https://github.com/user-attachments/assets/9fd59e95-4cb7-4cae-b906-fddce59bd85f)
+
+
 ## Requirements
 To use this reverse shell, you need the following:
 
