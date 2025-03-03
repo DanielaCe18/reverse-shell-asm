@@ -42,7 +42,7 @@ This will generate an executable named `reverse_shell`.
 On the **attacker's** machine, use `ncat` to listen for incoming connections:
 
 ```powershell
-PS C:\Users\cedan> ncat -lvnp 12345
+PS C:\Users\X> ncat -lvnp 12345
 ```
 
 This command:
@@ -68,6 +68,11 @@ You can now execute commands remotely on the victim's machine.
 - You may need `sudo` privileges on the victim's machine.
 - Modify the script for stealth, persistence, or obfuscation if required.
 
-## Disclaimer
-This script is for **educational purposes only**. Unauthorized use of this script for malicious activities is illegal. Use it only in controlled environments or with proper authorization.
+## Licensing
+
+This reverse shell is released under the MIT license by DanielaCe18. Source code is available on GitHub.
+
+## Disclaimer ⚠️
+
+Usage of this reverse shell for attacking a target without prior consent of its owner is illegal. It is the end user's responsibility to obey all applicable local laws.
 
