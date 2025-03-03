@@ -34,7 +34,7 @@ To set your attacker's IP address, convert your **IPv4 address** into **little-e
 Use **NASM** and **LD** to compile the script:
 
 ```bash
-nasm -f elf64 reverse_shell.asm -o reverse_shell.o
+nasm -f elf64 reverse_shell.s -o reverse_shell.o
 ld reverse_shell.o -o reverse_shell
 ```
 
