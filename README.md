@@ -68,7 +68,6 @@ You can now execute commands remotely on the victim's machine.
 
 ## Notes
 - Ensure that **firewall rules** and **antivirus** do not block the connection.
-- You may need `sudo` privileges on the victim's machine.
 - Modify the script for stealth, persistence, or obfuscation if required.
 
 ## Licensing
